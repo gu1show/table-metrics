@@ -10,7 +10,8 @@ requires-python = ">=3.13"
 dependencies = [
     "apted (>=1.0.3,<2.0.0)",
     "lxml (>=6.0.2,<7.0.0)",
-    "rapidfuzz (>=3.14.1,<4.0.0)"
+    "rapidfuzz (>=3.14.1,<4.0.0)",
+    "numpy (>=2.4.0,<3.0.0)",
 ]
 
 [tool.poetry]

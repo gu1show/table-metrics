@@ -1,3 +1,15 @@
 from .teds import teds
+from .grits import (
+    html_to_cells,
+    grits_con_score,
+    grits_loc_score,
+    grits_top_score,
+)
 
-__all__ = ["teds"]
+__all__ = [
+    "teds",
+    "html_to_cells",
+    "grits_con_score",
+    "grits_loc_score",
+    "grits_top_score",
+]
