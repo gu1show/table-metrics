@@ -47,7 +47,7 @@ class _CustomConfig(Config):
         return 0.0
 
 
-def teds(
+def teds_score(
     y_true: str,
     y_pred: str,
     structure_only: bool = False,
