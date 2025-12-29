@@ -1,5 +1,5 @@
 # Table Metrics
-**Table Metrics** is a Python library implementing widely used evaluation metrics for table extraction and table structure recognition tasks.
+**Table Metrics** is a Python library implementing evaluation metrics for table extraction and table structure recognition tasks.
 
 Currently supported metrics:
 

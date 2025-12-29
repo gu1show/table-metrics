@@ -1,7 +1,7 @@
 [project]
 name = "table-metrics"
 version = "0.1.0"
-description = ""
+description = "Python library implementing GriTS and TEDS"
 authors = [
     {name = "gu1show",email = "denissolovyov57@gmail.com"}
 ]
