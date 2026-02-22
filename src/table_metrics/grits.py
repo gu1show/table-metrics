@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from rapidfuzz.distance import LCSseq
 from lxml import html, etree
 from collections import defaultdict
+from collections.abc import Callable
 from typing import Self
 
 import numpy as np
@@ -14,7 +15,7 @@ class _Rect:
     x1: float
     y1: float
 
-    def __init__(self, bbox: Self | tuple | list = (0, 0, 0, 0)):
+    def __init__(self, bbox: Self | tuple | list = (0, 0, 0, 0)) -> None:
         if isinstance(bbox, _Rect):
             object.__setattr__(self, "x0", bbox.x0)
             object.__setattr__(self, "y0", bbox.y0)
@@ -58,7 +59,9 @@ class _Rect:
         return _Rect([x0, y0, x1, y1])
 
 
-def _compute_fscore(num_true_positives, num_true, num_positives):
+def _compute_fscore(
+    num_true_positives: int, num_true: int, num_positives: int
+) -> tuple[float, float, float]:
     if num_positives:
         precision = num_true_positives / num_positives
     else:
@@ -77,7 +80,9 @@ def _compute_fscore(num_true_positives, num_true, num_positives):
     return fscore, precision, recall
 
 
-def _initialize_DP(sequence1_length, sequence2_length, need_pointers: bool = False):
+def _initialize_DP(
+    sequence1_length: int, sequence2_length: int, need_pointers: bool = False
+) -> tuple[list[list[int]], list[list[int]] | None]:
     scores = [[0] * (sequence2_length + 1) for _ in range(sequence1_length + 1)]
 
     if need_pointers:
@@ -93,7 +98,7 @@ def _initialize_DP(sequence1_length, sequence2_length, need_pointers: bool = Fal
         return scores, None
 
 
-def _traceback(pointers):
+def _traceback(pointers: list[list[int]]) -> tuple[list[int], list[int]]:
     seq1_idx = len(pointers) - 1
     seq2_idx = len(pointers[0]) - 1
     aligned_sequence1_indices = []
@@ -116,8 +121,12 @@ def _traceback(pointers):
 
 
 def _align_1d(
-    sequence1, sequence2, reward_lookup, return_alignment=False, is_transposed=False
-):
+    sequence1: list[tuple[int, int]],
+    sequence2: list[tuple[int, int]],
+    reward_lookup: Callable,
+    return_alignment: bool = False,
+    is_transposed: bool = False,
+) -> tuple[list[int], list[int], float] | float:
     sequence1_length = len(sequence1)
     sequence2_length = len(sequence2)
 
@@ -156,7 +165,12 @@ def _align_1d(
         return score
 
 
-def _align_2d_outer(true_shape, pred_shape, reward_lookup, is_transposed=False):
+def _align_2d_outer(
+    true_shape: tuple[int, int],
+    pred_shape: tuple[int, int],
+    reward_lookup: Callable,
+    is_transposed=False,
+) -> tuple[list[int], list[int], float]:
     scores, pointers = _initialize_DP(true_shape[0], pred_shape[0], need_pointers=True)
 
     for row_idx in range(1, true_shape[0] + 1):
@@ -187,10 +201,16 @@ def _align_2d_outer(true_shape, pred_shape, reward_lookup, is_transposed=False):
     return aligned_true_indices, aligned_pred_indices, score
 
 
-def _factored_2dmss(true_cell_grid, pred_cell_grid, reward_function):
+def _factored_2dmss(
+    true_cell_grid: np.ndarray[list[list[int]]],
+    pred_cell_grid: np.ndarray[list[list[int]]],
+    reward_function: Callable,
+) -> tuple[float, float, float, float]:
     reward_cache = {}
 
-    def get_reward(trow: int, tcol: int, prow: int, pcol: int, is_transposed=False):
+    def get_reward(
+        trow: int, tcol: int, prow: int, pcol: int, is_transposed: bool = False
+    ) -> float:
         if is_transposed:
             key = (tcol, trow, pcol, prow)
         else:
@@ -233,11 +253,11 @@ def _factored_2dmss(true_cell_grid, pred_cell_grid, reward_function):
     return fscore, precision, recall, upper_bound_score
 
 
-def _lcs_similarity(string1, string2):
+def _lcs_similarity(string1: str, string2: str) -> float:
     return LCSseq.normalized_similarity(string1, string2)
 
 
-def _iou(bbox1, bbox2):
+def _iou(bbox1: list[list[float]], bbox2: list[list[float]]) -> float:
     first_rect = _Rect(bbox1)
     second_rect = _Rect(bbox2)
     intersection = first_rect.intersect(second_rect)
@@ -250,9 +270,12 @@ def _iou(bbox1, bbox2):
     return 0
 
 
-def _cells_to_grid(cells, key="bbox"):
-    if len(cells) == 0:
+def _cells_to_grid(
+    cells: list[dict[str, int | bool | str]], key: str = "bbox"
+) -> list[list[int | bool | str]]:
+    if not len(cells):
         return [[]]
+
     num_rows = max([max(cell["row_nums"]) for cell in cells]) + 1
     num_columns = max([max(cell["column_nums"]) for cell in cells]) + 1
     cell_grid = [[0] * num_columns for _ in range(num_rows)]
@@ -264,8 +287,10 @@ def _cells_to_grid(cells, key="bbox"):
     return cell_grid
 
 
-def _cells_to_relspan_grid(cells):
-    if len(cells) == 0:
+def _cells_to_relspan_grid(
+    cells: list[dict[str, int | bool | str]],
+) -> list[list[list[int]]]:
+    if not len(cells):
         return [[]]
 
     num_rows = max([max(cell["row_nums"]) for cell in cells]) + 1
@@ -288,7 +313,11 @@ def _cells_to_relspan_grid(cells):
     return cell_grid
 
 
-def _get_spanning_cell_rows_and_columns(spanning_cells, rows, columns):
+def _get_spanning_cell_rows_and_columns(
+    spanning_cells: list[dict[str, list[float] | int]],
+    rows: list[dict[str, list[float]]],
+    columns: list[dict[str, list[float]]],
+) -> list[list[tuple[int, int]]]:
     matches_by_spanning_cell = []
     all_matches = set()
     for spanning_cell in spanning_cells:
@@ -346,7 +375,9 @@ def _get_spanning_cell_rows_and_columns(spanning_cells, rows, columns):
     return matches_by_spanning_cell
 
 
-def _output_to_dilatedbbox_grid(bboxes, labels):
+def _output_to_dilatedbbox_grid(
+    bboxes: list[list[float]], labels: list[int]
+) -> list[list[list[float]]]:
     rows = [{"bbox": bbox} for bbox, label in zip(bboxes, labels) if label == 2]
     columns = [{"bbox": bbox} for bbox, label in zip(bboxes, labels) if label == 1]
     spanning_cells = [

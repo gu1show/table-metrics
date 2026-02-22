@@ -13,7 +13,7 @@ class _TableTree(Tree):
         rowspan: int | None = None,
         content: list[str] | None = None,
         *children: tuple[Tree],
-    ):
+    ) -> None:
         self.tag = tag
         self.colspan = colspan
         self.rowspan = rowspan
@@ -23,11 +23,11 @@ class _TableTree(Tree):
 
 class _CustomConfig(Config):
     @staticmethod
-    def maximum(*sequences):
+    def maximum(*sequences) -> int:
         """Get maximum possible value"""
         return max(map(len, sequences))
 
-    def normalized_distance(self, *sequences):
+    def normalized_distance(self, *sequences) -> float:
         """Get distance from 0 to 1"""
         return float(Levenshtein.distance(*sequences)) / self.maximum(*sequences)
 
